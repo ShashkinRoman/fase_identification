@@ -13,6 +13,8 @@ ipython-genutils==0.2.0
 jedi==0.17.1
 numpy==1.19.0
 opencv-contrib-python==4.5.1.48
+opencv-python==4.5.1.48
+pandas==1.2.4
 parso==0.7.0
 pexpect==4.8.0
 pickleshare==0.7.5
@@ -21,11 +23,13 @@ prompt-toolkit==3.0.5
 psycopg2==2.8.6
 ptyprocess==0.6.0
 Pygments==2.6.1
+python-dateutil==2.8.1
 python-dotenv==0.17.0
 pytz==2020.1
 six==1.15.0
 sqlparse==0.3.1
 traitlets==4.3.3
+transliterate==1.10.2
 wcwidth==0.2.5
 websocket-client==0.57.0
 websockets==8.1

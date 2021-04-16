@@ -8,10 +8,20 @@ from monitoring_system.models import User, Journal
 from transliterate import translit
 from time import sleep
 from collections import Counter
-
+from sys import argv
 # todo продумать ситуацию, когда человек при выходе неправильно опознался
 
-video_capture = cv2.VideoCapture(0)
+
+# устанавливает статус входа или выхода для журнала и video_capture
+if type(argv[1]) == int:
+    video_capture = cv2.VideoCapture(argv[1])
+    if int(argv[1]) == 1:
+        journal_status = True  # Вход
+    if int(argv[1]) == 0:
+        journal_status = False  # Выход
+else:
+    video_capture = cv2.VideoCapture(0)
+    journal_status = True
 
 
 def load_users():
@@ -86,7 +96,7 @@ while True:
             if frame_counter > 0 and frame_counter % 20 == 0:
                 # Getting key with maximum value in dictionary
                 final_name = max(Counter(face_list_controller), key=Counter(face_list_controller).get)
-                Journal.objects.create(status=True, userid=User.objects.get(id=int(final_name.split(')')[0])))
+                Journal.objects.create(status=journal_status, userid=User.objects.get(id=int(final_name.split(')')[0])))
                 print("Дверь открыта!")
                 frame_counter = 0
                 face_list_controller = []
@@ -124,36 +134,3 @@ while True:
 # Release handle to the webcam
 video_capture.release()
 cv2.destroyAllWindows()
-
-def video_flow(video_source):
-    """Считывает видеопоток из источника """
-    video_capture = cv2.VideoCapture(0)
-    pass
-
-
-def statuses_load():
-    """
-     Подтягивает из бд статусы
-    :return:
-    """
-
-
-def write_journal():
-    """
-    ЗАписывает информацию в журнал, в зависимости от того с какого сигнала пришло видео
-    :return:
-    """
-
-
-def time_calculate():
-    """
-    Показывает сколько времени осталось сегодня человеку пройти
-    :return:
-    """
-
-
-def start_wideo_flow():
-    """
-    Старт видео потока возвращение результатов
-    :return:
-    """
