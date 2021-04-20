@@ -1,11 +1,9 @@
 from monitoring_system.models import Journal, User
-from datetime import datetime
+from datetime import datetime, timedelta
 from sys import argv
 import calendar
 import pandas as pd
 import numpy as np
-
-month = 4
 
 
 if argv[1] == '1':
@@ -26,70 +24,95 @@ def create_dates(yearnumber: str, mount_number: str):
     pass
 
 
-def reports(start_date, end_date):
-    """ Считает отчет по количеству учтенного времени
+def day_reports(start_day, end_day):
+    """ Отчет по количеству учтенного времени
     {date: 1, name_1: time_inside: 7:23, time_outside: 0:37, coming: 7:30, leave: 16:00
     timetable: ((7:23, True), (8:53, False), ...), video_path: ((7:30, /static/qweq), (...))"""
     journal = Journal.objects.values_list('status', 'userid', 'userid_id__first_name', 'userid_id__second_name',
                                           'status_recoding_time', 'path_on_video').\
-        filter(status_recoding_time__range=(start_date, end_date))
-    df = pd.DataFrame(journal, columns= ['status', 'userid', 'first_name', 'second_name',
+        filter(status_recoding_time__range=(start_day, end_day))
+    df = pd.DataFrame(journal, columns = ['status', 'userid', 'first_name', 'second_name',
                                          'status_recoding_time', 'path_on_video'])
+    df['status_recoding_time'] = pd.to_datetime(df.status_recoding_time).dt.tz_convert(None)
 
-
+    reports = []
     report = {}
     workers_id = list(df['userid'].unique())
-    for i in workers_id:
-        coming = df.loc[df['userid'] == i].loc[df['status'] == True].\
+
+    for worker in workers_id:
+        coming = df.loc[df['userid'] == worker].loc[df['status'] == True].\
             sort_values(by=['status_recoding_time']).head(1).status_recoding_time
-        leave = df.loc[df['userid'] == i].loc[df['status'] == False].\
+        leave = df.loc[df['userid'] == worker].loc[df['status'] == False].\
             sort_values(by=['status_recoding_time'], ascending=False).head(1).status_recoding_time
 
-        time_inside = []
-        time_outside = []
-        video_path = []
-        timetable = ['?']
+        time_inside = 0
+        time_outside = 0
+        video_path = []  # пока не реализовано
 
-        """для каждого сотрудника в дате
-        найти первое значение со статусо true (coming)
-        найти следующее значение до статуса False
-        посчитать это время
-        от фолса найти значение до статуса True
-        посчитать время отсутствия
-        и т.д. до последнего false(leave)"""
-        coming_inside = df.loc[df['userid'] == i].loc[df['status'] == True].\
-            sort_values(by=['status_recoding_time']).head(1)
-        for i in df:
-            "Найти следующее время с false, сравнить с leave, если не равно, то" \
-            "посчитать дельту, записатьв и insaid" \
-            "найти следующую дату true, записать в outside" \
-            "else дата с false = leave:" \
-            "break " \
-            ""
-            if not df.sort_values(by=['status_recoding_time'])['status_recoding_time'].min().to_datetime64() \
-                   == np.datetime64(coming.values[0]):
+        # Устанавливаем стату на "вход" и находим время первого подхода к двери со статусом "вход"
+        status_worker = True
+        coming_to_door = df.loc[df['userid'] == worker].loc[df['status'] == status_worker]. \
+            sort_values(by=['status_recoding_time']).head(1).status_recoding_time
 
-                print('jo[a')
-            else:
-                print('da suka')
-            df.loc[df['status_recoding_time'] > coming_inside]
-            df.sort_values('status_recoding_time').status_recoding_time == coming_inside.values[0]
+        # Сделал на случай, если мне понадобится исходный датафрейм
+        df_for_cycle = df
 
+        # Считаем время внутри и снаружи, изменяя каждый подход к двери status_worker и отсекая
+        for open_door in range(1, len(df.loc[df['userid'] == worker])):
+            try:
+                if status_worker:
+                    # ищем время нахождения внтри до первого выхода и записываем в time_inside
+                    status_worker = False
+                    coming_out = df_for_cycle.loc[df_for_cycle['userid'] == worker]. \
+                        loc[df_for_cycle['status'] == status_worker]. \
+                        sort_values(by=['status_recoding_time']).head(1).status_recoding_time
 
-        worker_first_name = df.loc[df['userid'] == i].head(1).first_name.get(0)
-        worker_second_name = df.loc[df['userid'] == i].head(1).second_name.get(0)
-        report['date'] = (start_date.strftime("%d-%m-%Y %H:%M:%S"), end_date.strftime("%d-%m-%Y %H:%M:%S"))
+                    time_inside_ = coming_out.values[0] - coming_to_door.values[0]
+                    time_inside += time_inside_
+
+                    # сокращаем датафрейм и устанавливаем подход к двери на тот который будем минусовать в следуюзий раз
+                    df_for_cycle = df_for_cycle. \
+                    loc[df_for_cycle['userid'] == worker][df['status_recoding_time'] >= coming_out.values[0]]
+                    coming_to_door = df_for_cycle.loc[df_for_cycle['userid'] == worker]. \
+                        sort_values(by=['status_recoding_time']).head(1).status_recoding_time
+                    # проверяем не последний ли это выход, если последний, то прерываем цикл
+                    if coming_out.values[0] == leave.values[0]:
+                        print('konec suka')
+                        break
+
+                if not status_worker:
+                    status_worker = True
+                    coming_in = df_for_cycle.loc[df_for_cycle['userid'] == worker]. \
+                        loc[df_for_cycle['status'] == status_worker].\
+                        sort_values(by=['status_recoding_time']).head(1).status_recoding_time
+
+                    time_outside_ = coming_in.values[0] - coming_to_door.values[0]
+                    time_outside += time_outside_
+                    df_for_cycle = df_for_cycle.loc[df_for_cycle['userid'] == worker][
+                        df['status_recoding_time'] >= coming_in.values[0]]
+
+                    coming_to_door = df_for_cycle.loc[df_for_cycle['userid'] == worker]. \
+                        sort_values(by=['status_recoding_time']).head(1).status_recoding_time
+
+            except IndexError:
+                print('pohuy pliashem')
+                break
+
+        worker_first_name = df.loc[df['userid'] == worker].head(1).first_name.get(0)
+        worker_second_name = df.loc[df['userid'] == worker].head(1).second_name.get(0)
+        report['date'] = (start_day.strftime("%d-%m-%Y %H:%M:%S"), end_day.strftime("%d-%m-%Y %H:%M:%S"))
         report['name'] = ' '.join((worker_first_name, worker_second_name))
         report['coming'] = str(datetime.utcfromtimestamp(np.datetime64(coming.values[0], 's').astype(int)))
         report['leave'] = str(datetime.utcfromtimestamp(np.datetime64(leave.values[0], 's').astype(int)))
-        report['time_inside'] = time_inside
-        report['time_outside'] = time_outside
+        report['time_inside'] = time_inside.astype('timedelta64[m]')
+        report['time_outside'] = time_outside.astype('timedelta64[m]')
         report['video_path'] = video_path
-        report['timetable'] = timetable
-    return report
+        reports.append(report)
+    return reports
 
 
-def var():datetime.utcnow()
-    # start_date = datetime(2021, 4, 16, 0, 0, 0)
-    # end_date = datetime(2021, 4, 16, 23, 59, 59)
+def var():
+    start_day = pd.to_datetime('2021-04-16 00:00:00')
+    end_day = pd.to_datetime('2021-04-16 23:59:59')
+
 
