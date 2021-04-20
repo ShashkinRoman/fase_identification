@@ -31,7 +31,7 @@ def day_reports(start_day, end_day):
     journal = Journal.objects.values_list('status', 'userid', 'userid_id__first_name', 'userid_id__second_name',
                                           'status_recoding_time', 'path_on_video').\
         filter(status_recoding_time__range=(start_day, end_day))
-    df = pd.DataFrame(journal, columns = ['status', 'userid', 'first_name', 'second_name',
+    df = pd.DataFrame(journal, columns=['status', 'userid', 'first_name', 'second_name',
                                          'status_recoding_time', 'path_on_video'])
     df['status_recoding_time'] = pd.to_datetime(df.status_recoding_time).dt.tz_convert(None)
 
@@ -111,8 +111,11 @@ def day_reports(start_day, end_day):
     return reports
 
 
-def var():
+def main():
     start_day = pd.to_datetime('2021-04-16 00:00:00')
     end_day = pd.to_datetime('2021-04-16 23:59:59')
+    day_reports(start_day, end_day)
 
 
+if __name__ == '__main__':
+    main()
