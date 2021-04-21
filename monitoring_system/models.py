@@ -18,7 +18,8 @@ class User(models.Model):
 class Journal(models.Model):
     """Журнал учитывающий срабатывание системы на вход и на выход"""
     status = models.BooleanField(verbose_name="Статус")
-    userid = models.ForeignKey("User", on_delete=models.CASCADE, verbose_name="ID пользователя", related_name='rn_user')
+    userid = models.ForeignKey("User", on_delete=models.CASCADE, verbose_name="ID пользователя", related_name='rn_user',
+                               default=0)
     status_recoding_time = models.DateTimeField(auto_now_add=True, verbose_name="Дата внесения в журнал")
     path_on_video = models.ImageField(upload_to="static/video", blank=True, verbose_name="Ссылка на видео")
 

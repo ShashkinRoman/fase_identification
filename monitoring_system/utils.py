@@ -96,7 +96,7 @@ while True:
             if frame_counter > 0 and frame_counter % 20 == 0:
                 # Getting key with maximum value in dictionary
                 final_name = max(Counter(face_list_controller), key=Counter(face_list_controller).get)
-                Journal.objects.create(status=journal_status, userid=User.objects.get(id=int(final_name.split(')')[0])))
+                Journal.objects.create(status=journal_status, user_id=User.objects.get(id=int(final_name.split(')')[0])))
                 print("Дверь открыта!")
                 frame_counter = 0
                 face_list_controller = []
